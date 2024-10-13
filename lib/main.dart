@@ -46,6 +46,11 @@ class _VoskFlutterDemoState extends State<VoskFlutterDemo> {
   @override
   void initState() {
     super.initState();
+    // _loadRemoteModel();
+    _loadLocalModel();
+  }
+
+  _loadRemoteModel() {
     _modelLoader
         .loadModelsList()
         .then((modelsList) =>
@@ -55,6 +60,28 @@ class _VoskFlutterDemoState extends State<VoskFlutterDemo> {
         .then(
             (modelPath) => _vosk.createModel(modelPath)) // create model object
         .then((model) => setState(() => _model = model))
+        .then((_) => _vosk.createRecognizer(
+            model: _model!, sampleRate: _sampleRate)) // create recognizer
+        .then((value) => _recognizer = value)
+        .then((recognizer) {
+      if (Platform.isAndroid) {
+        _vosk
+            .initSpeechService(_recognizer!) // init speech service
+            .then((speechService) =>
+                setState(() => _speechService = speechService))
+            .catchError((e) => setState(() => _error = e.toString()));
+      }
+    }).catchError((e) {
+      setState(() => _error = e.toString());
+      return null;
+    });
+  }
+
+  _loadLocalModel() async {
+    const modelAsset = 'assets/models/vosk-model-small-uz-0.22.zip';
+    _vosk
+        .createModel(await ModelLoader().loadFromAssets(modelAsset))
+        .then((value) => setState(() => _model = value))
         .then((_) => _vosk.createRecognizer(
             model: _model!, sampleRate: _sampleRate)) // create recognizer
         .then((value) => _recognizer = value)
